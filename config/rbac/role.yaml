@@ -21,8 +21,38 @@ rules:
 - apiGroups:
   - resource.baloise.ch.baloise.ch
   resources:
+  - copyresources/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - resource.baloise.ch.baloise.ch
+  resources:
   - copyresources/status
   verbs:
   - get
   - patch
   - update
+- apiGroups:
+  - v1
+  resources:
+  - configmap
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - v1
+  resources:
+  - secret
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch

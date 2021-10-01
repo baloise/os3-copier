@@ -1,3 +1,7 @@
+# docker files
+docker-compose.*
+start-operator-sdk.sh
+
 # Binaries for programs and plugins
 *.exe
 *.exe~
