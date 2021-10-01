@@ -49,6 +49,9 @@ type Object interface {
 
 // +kubebuilder:rbac:groups=resource.baloise.ch.baloise.ch,resources=copyresources,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=resource.baloise.ch.baloise.ch,resources=copyresources/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=resource.baloise.ch.baloise.ch,resources=copyresources/finalizers,verbs=update
+// +kubebuilder:rbac:groups=v1,resources=secret,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=v1,resources=configmap,verbs=get;list;watch;create;update;patch;delete
 
 func (r *CopyResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
