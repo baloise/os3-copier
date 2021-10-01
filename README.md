@@ -1,5 +1,5 @@
 # os3-copier
-OpenShift 3.x Version of the [k8s-copier](https://github.com/baloise/k8s-copier)
+OpenShift 3.x Version of the [k8s-copier](https://github.com/dweber019/k8s-copier)
 
 This operator aims to provide Kubernetes CRD's to copy resources from one namespace into another.  
 This new CRD is called `CopyResrouce` and the resulting resource is called target resource.
