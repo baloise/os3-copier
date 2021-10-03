@@ -73,7 +73,9 @@ func (r *CopyResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		Namespace: req.Namespace,
 		Name:      copyResource.Spec.MetaName,
 	}
+
 	sourceResource, _ := StringToStruct(copyResource.Spec.Kind)
+
 	err = r.Client.Get(ctx, namespacedName, sourceResource)
 	if err != nil && !errors.IsNotFound(err) {
 		log.Error(err, "Get Resource error.")
@@ -92,16 +94,16 @@ func (r *CopyResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		Namespace: targetResource.GetNamespace(),
 		Name:      targetResource.GetName(),
 	}
-	targetNamespacedObject, _ := StringToStruct(copyResource.Spec.Kind)
-	err = r.Client.Get(ctx, targetNamespacedName, targetNamespacedObject)
+	//targetNamespacedObject, _ := StringToStruct(copyResource.Spec.Kind)
+	err = r.Client.Get(ctx, targetNamespacedName, targetResource)
 
-	if copyResource.Status.ResourceVersion == "" || copyResource.Status.ResourceVersion != sourceResource.GetResourceVersion() || errors.IsNotFound(err) {
+	if copyResource.Status.ResourceVersion == "" || sourceResourceVersionHasChanged(copyResource.Spec.Kind, copyResource.Status.ResourceVersion, sourceResource) || errors.IsNotFound(err) {
 		err = r.Client.Create(ctx, targetResource)
 		if err != nil && errors.IsAlreadyExists(err) {
 			err = r.Client.Update(ctx, targetResource)
 		}
 		if err == nil {
-			copyResource.Status.ResourceVersion = sourceResource.GetResourceVersion()
+			copyResource.Status.ResourceVersion = getResourceVersion(copyResource.Spec.Kind, sourceResource)
 			err := r.Status().Update(ctx, copyResource)
 			if err != nil {
 				log.Error(err, "Failed to update CopyResource status")
@@ -127,13 +129,33 @@ func StringToStruct(kind string) (Object, error) {
 func cloneResource(kind string, source Object, target Object) (Object, error) {
 	switch kind {
 	case "Secret":
-		copier.Copy(target.(*v1.Secret), source.(*v1.Secret))
+		sourceSecret := source.(*v1.Secret)
+		copier.Copy(target.(*v1.Secret), sourceSecret)
+		target.SetResourceVersion(sourceSecret.ResourceVersion)
 		return target, nil
 	case "ConfigMap":
-		copier.Copy(target.(*v1.ConfigMap), source.(*v1.ConfigMap))
+		sourceConfigMap := source.(*v1.ConfigMap)
+		copier.Copy(target.(*v1.ConfigMap), sourceConfigMap)
+		target.SetResourceVersion(sourceConfigMap.ResourceVersion)
 		return target, nil
 	default:
 		return nil, fmt.Errorf("%s is not a known resource name", kind)
+	}
+}
+
+func sourceResourceVersionHasChanged(kind string, copyRessourceVersion string, source Object) bool {
+	sourceResourceVersion := getResourceVersion(kind, source)
+	return sourceResourceVersion != copyRessourceVersion
+}
+
+func getResourceVersion(kind string, resource Object) string {
+	switch kind {
+	case "Secret":
+		return resource.(*v1.Secret).ResourceVersion
+	case "ConfigMap":
+		return resource.(*v1.ConfigMap).ResourceVersion
+	default:
+		return ""
 	}
 }
 
