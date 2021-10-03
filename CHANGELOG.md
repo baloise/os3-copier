@@ -1,3 +1,10 @@
+### [1.1.1](https://github.com/baloise/os3-copier/compare/v1.1.0...v1.1.1) (2021-10-03)
+
+
+### Bug Fixes
+
+* **chist-1:** fix resourceVersion validation ([3f14a65](https://github.com/baloise/os3-copier/commit/3f14a650afc5c9e32df2358dcaf3711be2cb1a4d))
+
 ## [1.1.0](https://github.com/baloise/os3-copier/compare/v1.0.0...v1.1.0) (2021-10-03)
 
 
