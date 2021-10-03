@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: os3-copier
+  labels:
+    app: os3-copier
+---
+apiVersion: rbac.authorization.os3.io/v1
+kind: RoleBinding
+metadata:
+  name: os3-copier-role-binding
+roleRef:
+  kind: ClusterRole
+  apiGroup: rbac.authorization.os3.io
+  name: os3-copier-manager-role
+subjects:
+  - kind: ServiceAccount
+    name: os3-copier
+    namespace: <namespace>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: os3-copier-deployment
+spec:
+  selector:
+    matchLabels:
+      app: os3-copier
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: os3-copier
+    spec:
+      serviceAccountName: os3-copier
+      containers:
+        - name: os3-copier
+          image: baloise/os3-copier:1.0.0
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            limits:
+              cpu: 100m
+              memory: 30Mi
+            requests:
+              cpu: 100m
+              memory: 20Mi
