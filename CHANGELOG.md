@@ -1,3 +1,10 @@
+## [1.1.0](https://github.com/baloise/os3-copier/compare/v1.0.0...v1.1.0) (2021-10-03)
+
+
+### Features
+
+* **chist-1:** add health endpoint and log statements ([22baf54](https://github.com/baloise/os3-copier/commit/22baf54c23c4a841492482628ba8598521a1e5d2))
+
 ## 1.0.0 (2021-09-30)
 
 
