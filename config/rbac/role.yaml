@@ -6,6 +6,26 @@ metadata:
   creationTimestamp: null
   name: os3-manager-manager-role
 rules:
+- resources:
+  - configmap
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- resources:
+  - secret
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - resource.baloise.ch.baloise.ch
   resources:
@@ -32,27 +52,3 @@ rules:
   - get
   - patch
   - update
-- apiGroups:
-  - v1
-  resources:
-  - configmap
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - v1
-  resources:
-  - secret
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch

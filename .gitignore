@@ -1,6 +1,4 @@
 # docker files
-docker-compose.*
-start-operator-sdk.sh
 
 # Binaries for programs and plugins
 *.exe
@@ -28,3 +26,6 @@ bin
 *.swo
 *~
 /os3-copier
+/docker-compose-os3-copier.env
+/docker-compose-os3-copier.yaml
+/.docker-operator-sdk/

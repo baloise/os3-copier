@@ -35,7 +35,13 @@ spec:
       serviceAccountName: os3-copier
       containers:
         - name: os3-copier
-          image: baloise/os3-copier:1.0.0
+          image: baloise/os3-copier:1.1.1
+          imagePullPolicy: Always
+          command:
+            - /manager
+          env:
+            - name: WATCH_NAMESPACE
+              value: '{{ .Release.Namespace }}'
           livenessProbe:
             httpGet:
               path: /healthz
