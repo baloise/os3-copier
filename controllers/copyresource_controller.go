@@ -93,11 +93,8 @@ func (r *CopyResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	targetResource.SetName(copyResource.Namespace + "-" + copyResource.Name)
 	targetResource.SetOwnerReferences(nil)
 
-	//ownerReference := &metav1.OwnerReference{}
-	//ownerReference.APIVersion = copyResource.APIVersion
-	//ownerReference.Kind = copyResource.Kind
-	//ownerReference.Name = copyResource.GetName()
-	//ownerReference.UID = copyResource.GetUID()
+	ownerReference := buildOwnerReferenceToCopyRessource(copyResource)
+	targetResource.SetOwnerReferences([]metav1.OwnerReference{ownerReference})
 
 	targetNamespacedName := types.NamespacedName{
 		Namespace: targetResource.GetNamespace(),
@@ -154,6 +151,24 @@ func cloneResource(kind string, source Object, target Object) (Object, error) {
 	}
 }
 
+func buildOwnerReferenceToCopyRessource(copyResource *resourcebaloisechv1alpha1.CopyResource) metav1.OwnerReference {
+	ownerReference := metav1.OwnerReference{}
+	ownerReference.APIVersion = copyResource.APIVersion
+	ownerReference.Kind = copyResource.Kind
+	ownerReference.Name = copyResource.GetName()
+	ownerReference.UID = copyResource.GetUID()
+	// If true, this reference points to the managing controller.
+	ownerReference.Controller = refToBoolTrue()
+	// If true, AND if the owner has the "foregroundDeletion" finalizer, then
+	// the owner cannot be deleted from the key-value store until this
+	// reference is removed.
+	// Defaults to false.
+	// To set this field, a user needs "delete" permission of the owner,
+	// otherwise 422 (Unprocessable Entity) will be returned.
+	ownerReference.BlockOwnerDeletion = refToBoolFalse()
+	return ownerReference
+}
+
 func sourceResourceVersionHasChanged(kind string, copyRessourceVersion string, source Object) bool {
 	sourceResourceVersion := getResourceVersion(kind, source)
 	return sourceResourceVersion != copyRessourceVersion
@@ -174,4 +189,14 @@ func (r *CopyResourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&resourcebaloisechv1alpha1.CopyResource{}).
 		Complete(r)
+}
+
+func refToBoolFalse() *bool {
+	b := false
+	return &b
+}
+
+func refToBoolTrue() *bool {
+	b := true
+	return &b
 }
