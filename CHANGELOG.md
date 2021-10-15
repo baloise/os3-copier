@@ -1,3 +1,10 @@
+### [1.1.2](https://github.com/baloise/os3-copier/compare/v1.1.1...v1.1.2) (2021-10-15)
+
+
+### Bug Fixes
+
+* **CHIST-1:** fix sync ([d57a01a](https://github.com/baloise/os3-copier/commit/d57a01a6064fbc7b1d7184141bc3a724d42243b8))
+
 ### [1.1.1](https://github.com/baloise/os3-copier/compare/v1.1.0...v1.1.1) (2021-10-03)
 
 
