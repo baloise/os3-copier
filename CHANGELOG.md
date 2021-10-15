@@ -1,3 +1,10 @@
+## [1.2.0](https://github.com/baloise/os3-copier/compare/v1.1.2...v1.2.0) (2021-10-15)
+
+
+### Features
+
+* **CHIST-1:** add OwnerReference ([9702386](https://github.com/baloise/os3-copier/commit/9702386c5c1af5bb7d388017cbd0e14aaa2f06d7))
+
 ### [1.1.2](https://github.com/baloise/os3-copier/compare/v1.1.1...v1.1.2) (2021-10-15)
 
 
