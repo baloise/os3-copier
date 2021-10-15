@@ -18,6 +18,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -62,12 +63,15 @@ func main() {
 		os.Exit(1)
 	}
 
+	myDuration, _ := time.ParseDuration("20s")
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: metricsAddr,
 		Port:               9443,
 		LeaderElection:     enableLeaderElection,
 		LeaderElectionID:   "3dacd622.baloise.ch",
+		SyncPeriod:         &myDuration,
 		Namespace:          watchNamespace,
 	})
 	if err != nil {
