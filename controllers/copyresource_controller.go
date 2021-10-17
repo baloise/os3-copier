@@ -22,6 +22,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/go-logr/logr"
@@ -100,8 +102,18 @@ func (r *CopyResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		Namespace: targetResource.GetNamespace(),
 		Name:      targetResource.GetName(),
 	}
-	targetNamespacedObject, _ := StringToStruct(copyResource.Spec.Kind)
-	err = r.Get(ctx, targetNamespacedName, targetNamespacedObject)
+	//targetNamespacedObject, _ := StringToStruct(copyResource.Spec.Kind)
+	//err = r.Client.Get(ctx, targetNamespacedName, targetNamespacedObject)
+
+	// use an unstructured type for the search because Get uses a cached reader for structured type and the ressource could not be found.
+	// maybe because we try to read it from a different namespace.
+	u := &unstructured.Unstructured{}
+	u.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "",
+		Kind:    copyResource.Spec.Kind,
+		Version: "v1",
+	})
+	err = r.Client.Get(ctx, targetNamespacedName, u)
 
 	log.Info(":", copyResource.Status.ResourceVersion, sourceResource.GetResourceVersion())
 	if copyResource.Status.ResourceVersion == "" || sourceResourceVersionHasChanged(copyResource.Spec.Kind, copyResource.Status.ResourceVersion, sourceResource) || errors.IsNotFound(err) {
