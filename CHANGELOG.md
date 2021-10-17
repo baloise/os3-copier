@@ -1,3 +1,10 @@
+### [1.2.1](https://github.com/baloise/os3-copier/compare/v1.2.0...v1.2.1) (2021-10-17)
+
+
+### Bug Fixes
+
+* **chist-1:** search target resource using an unstructured type ([772ef15](https://github.com/baloise/os3-copier/commit/772ef150e41487b9243c28129c748be0d3a6f4b9))
+
 ## [1.2.0](https://github.com/baloise/os3-copier/compare/v1.1.2...v1.2.0) (2021-10-15)
 
 
