@@ -1,3 +1,10 @@
+### [1.2.3](https://github.com/baloise/os3-copier/compare/v1.2.2...v1.2.3) (2021-10-18)
+
+
+### Bug Fixes
+
+* **CHIST-1:** fix dublicate domain name in group name, fix role definition, add env var for syncPeriod, ([62d9681](https://github.com/baloise/os3-copier/commit/62d9681ae1ddf71eda455a5dd80fe0af2fd5cc4e))
+
 ### [1.2.2](https://github.com/baloise/os3-copier/compare/v1.2.1...v1.2.2) (2021-10-18)
 
 
