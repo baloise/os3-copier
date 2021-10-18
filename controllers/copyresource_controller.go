@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/prometheus/common/log"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -47,15 +48,15 @@ type Object interface {
 	runtime.Object
 }
 
-// +kubebuilder:rbac:groups=resource.baloise.ch.baloise.ch,resources=copyresources,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=resource.baloise.ch.baloise.ch,resources=copyresources/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=resource.baloise.ch.baloise.ch,resources=copyresources/finalizers,verbs=update
-// +kubebuilder:rbac:groups=,resources=secret,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=,resources=secret/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=,resources=secret/finalizers,verbs=update
-// +kubebuilder:rbac:groups=,resources=configmap,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=,resources=configmap/finalizers,verbs=update
-// +kubebuilder:rbac:groups=,resources=configmap/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=resource.baloise.ch,resources=copyresources,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=resource.baloise.ch,resources=copyresources/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=resource.baloise.ch,resources=copyresources/finalizers,verbs=update
+// +kubebuilder:rbac:groups=,resources=secrets,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=,resources=secrets/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=,resources=secrets/finalizers,verbs=update
+// +kubebuilder:rbac:groups=,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=,resources=configmaps/finalizers,verbs=update
+// +kubebuilder:rbac:groups=,resources=configmaps/status,verbs=get;update;patch
 
 func (r *CopyResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
@@ -88,51 +89,69 @@ func (r *CopyResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 	targetResource, _ := StringToStruct(copyResource.Spec.Kind)
 	targetResource, _ = cloneResource(copyResource.Spec.Kind, sourceResource, targetResource)
-
 	targetResource.SetResourceVersion("")
 	targetResource.SetUID("")
 	targetResource.SetNamespace(copyResource.Spec.TargetNamespace)
 	targetResource.SetName(copyResource.Namespace + "-" + copyResource.Name)
 	targetResource.SetOwnerReferences(nil)
-
 	ownerReference := buildOwnerReferenceToCopyRessource(copyResource)
 	targetResource.SetOwnerReferences([]metav1.OwnerReference{ownerReference})
 
+	exists := existsInTargetNamespace(r, targetResource)
+
+	if copyResource.Status.ResourceVersion == "" ||
+		sourceResourceVersionHasChanged(copyResource.Spec.Kind, copyResource.Status.ResourceVersion, sourceResource) ||
+		!exists {
+
+		if !exists {
+			err = r.Client.Create(ctx, targetResource)
+			if err != nil {
+				log.Error(err, "Failed to create "+targetResource.GetName()+" in namesapce "+targetResource.GetNamespace())
+				return ctrl.Result{}, err
+			}
+			log.Info("successfully created " + targetResource.GetName() + " in namesapce " + targetResource.GetNamespace())
+		} else {
+			err = r.Client.Update(ctx, targetResource)
+			if err == nil {
+				log.Info("successfully update " + targetResource.GetName() + " in namesapce " + targetResource.GetNamespace())
+			} else {
+				log.Error(err, "Failed to update "+targetResource.GetName()+" in namesapce "+targetResource.GetNamespace())
+				return ctrl.Result{}, err
+			}
+		}
+
+		copyResource.Status.ResourceVersion = getResourceVersion(copyResource.Spec.Kind, sourceResource)
+		err := r.Status().Update(ctx, copyResource)
+		if err != nil {
+			log.Error(err, "Failed to update CopyResource status")
+			return ctrl.Result{}, err
+		}
+	}
+
+	return ctrl.Result{}, nil
+}
+
+func existsInTargetNamespace(r *CopyResourceReconciler, targetResource Object) bool {
 	targetNamespacedName := types.NamespacedName{
 		Namespace: targetResource.GetNamespace(),
 		Name:      targetResource.GetName(),
 	}
-	//targetNamespacedObject, _ := StringToStruct(copyResource.Spec.Kind)
-	//err = r.Client.Get(ctx, targetNamespacedName, targetNamespacedObject)
-
 	// use an unstructured type for the search because Get uses a cached reader for structured type and the ressource could not be found.
 	// maybe because we try to read it from a different namespace.
 	u := &unstructured.Unstructured{}
 	u.SetGroupVersionKind(schema.GroupVersionKind{
 		Group:   "",
-		Kind:    copyResource.Spec.Kind,
+		Kind:    targetResource.GetObjectKind().GroupVersionKind().Kind,
 		Version: "v1",
 	})
-	err = r.Client.Get(ctx, targetNamespacedName, u)
-
-	log.Info(":", copyResource.Status.ResourceVersion, sourceResource.GetResourceVersion())
-	if copyResource.Status.ResourceVersion == "" || sourceResourceVersionHasChanged(copyResource.Spec.Kind, copyResource.Status.ResourceVersion, sourceResource) || errors.IsNotFound(err) {
-		log.Info("update ")
-		err = r.Client.Create(ctx, targetResource)
-		if err != nil && errors.IsAlreadyExists(err) {
-			err = r.Client.Update(ctx, targetResource)
+	err := r.Client.Get(context.TODO(), targetNamespacedName, u)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			log.Error(err, "Failed to search for target ressource:", targetNamespacedName)
 		}
-		if err == nil {
-			copyResource.Status.ResourceVersion = getResourceVersion(copyResource.Spec.Kind, sourceResource)
-			err := r.Status().Update(ctx, copyResource)
-			if err != nil {
-				log.Error(err, "Failed to update CopyResource status")
-				return ctrl.Result{}, err
-			}
-		}
+		return false
 	}
-
-	return ctrl.Result{}, nil
+	return true
 }
 
 func StringToStruct(kind string) (Object, error) {

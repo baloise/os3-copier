@@ -24,7 +24,7 @@ curl -o- https://raw.githubusercontent.com/craicoverflow/sailr/master/scripts/in
 Follow the installation guide at https://golang.org/doc/install
 
 ### Operator-SDK
-Uses the [Operator-SDK Version 0.18.2](https://github.com/operator-framework/operator-sdk/blob/v0.18.2/changelog/fragments/00-template.yaml) to be able to create and use CRDs compatible with OpenShift 3.x
+Uses the [Operator-SDK Version 0.18.2](https://github.com/operator-framework/operator-sdk/blob/v0.18.2) to be able to create and use CRDs compatible with OpenShift 3.x
 
 
 ## Development

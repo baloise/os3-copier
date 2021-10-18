@@ -17,6 +17,16 @@ rules:
   - update
   - watch
 - resources:
+  - configmap/finalizers
+  verbs:
+  - update
+- resources:
+  - configmap/status
+  verbs:
+  - get
+  - patch
+  - update
+- resources:
   - secret
   verbs:
   - create
@@ -26,8 +36,18 @@ rules:
   - patch
   - update
   - watch
+- resources:
+  - secret/finalizers
+  verbs:
+  - update
+- resources:
+  - secret/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
-  - resource.baloise.ch.baloise.ch
+  - resource.baloise.ch
   resources:
   - copyresources
   verbs:
@@ -39,13 +59,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - resource.baloise.ch.baloise.ch
+  - resource.baloise.ch
   resources:
   - copyresources/finalizers
   verbs:
   - update
 - apiGroups:
-  - resource.baloise.ch.baloise.ch
+  - resource.baloise.ch
   resources:
   - copyresources/status
   verbs:

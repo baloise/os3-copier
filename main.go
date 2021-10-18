@@ -33,6 +33,11 @@ import (
 	// +kubebuilder:scaffold:imports
 )
 
+const (
+	WatchNamespaceEnvName = "WATCH_NAMESPACE"
+	SyncPeriodEnvName     = "SYNC_PERIOD"
+)
+
 var (
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
@@ -56,14 +61,29 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 
-	watchNamespace, err := getWatchNamespace()
+	watchNamespace, err := getEnvVar(WatchNamespaceEnvName)
 	if err != nil {
 		setupLog.Error(err, "unable to get WatchNamespace, "+
-			"please set environment variable WATCH_NAMESPACE")
+			"please set environment variable "+WatchNamespaceEnvName)
 		os.Exit(1)
 	}
 
-	myDuration, _ := time.ParseDuration("20s")
+	syncPeriodS, err := getEnvVar(SyncPeriodEnvName)
+	if err != nil {
+		setupLog.Error(err, "unable to get SyncPeriod for Reconciler, "+
+			"please set environment variable "+SyncPeriodEnvName)
+		os.Exit(1)
+	}
+
+	syncDuration, err := time.ParseDuration(syncPeriodS)
+	if err != nil {
+		setupLog.Error(err, "error parsing SyncPeriod from "+
+			syncPeriodS+"please fix value for environment variable "+SyncPeriodEnvName+
+			"A duration string is a possibly signed sequence of decimal numbers, each with optional "+
+			"fraction and a unit suffix,such as \"300ms\", \"-1.5h\" or \"2h45m\". Valid time units are "+
+			"\"ns\", \"us\" (or \"µs\"), \"ms\", \"s\", \"m\", \"h\".")
+		os.Exit(1)
+	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
@@ -71,7 +91,7 @@ func main() {
 		Port:               9443,
 		LeaderElection:     enableLeaderElection,
 		LeaderElectionID:   "3dacd622.baloise.ch",
-		SyncPeriod:         &myDuration,
+		SyncPeriod:         &syncDuration,
 		Namespace:          watchNamespace,
 	})
 	if err != nil {
@@ -105,11 +125,21 @@ func main() {
 	}
 }
 
-func getWatchNamespace() (string, error) {
-	var watchNamespaceEnvVar = "WATCH_NAMESPACE"
-	ns, found := os.LookupEnv(watchNamespaceEnvVar)
+func getEnvVar(name string) (string, error) {
+	ns, found := os.LookupEnv(name)
 	if !found {
-		return "", fmt.Errorf("%s must be set", watchNamespaceEnvVar)
+		return "", fmt.Errorf("%s must be set", name)
 	}
 	return ns, nil
+}
+
+func getSyncPeriod() (time.Duration, error) {
+	syncPeriodS, err := getEnvVar(SyncPeriodEnvName)
+	if err != nil {
+		setupLog.Error(err, "unable to get SyncPeriod for Reconciler, "+
+			"please set environment variable "+SyncPeriodEnvName)
+	}
+	duration, err := time.ParseDuration(syncPeriodS)
+
+	return duration, nil
 }

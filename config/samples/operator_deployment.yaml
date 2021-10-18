@@ -42,6 +42,8 @@ spec:
           env:
             - name: WATCH_NAMESPACE
               value: '{{ .Release.Namespace }}'
+            - name: SYNC_PERIOD
+              value: '20s'
           livenessProbe:
             httpGet:
               path: /healthz

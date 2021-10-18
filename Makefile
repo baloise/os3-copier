@@ -18,6 +18,10 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
+# ENV variables needed by the operator
+WATCH_NAMESPACE=keycloak
+SYNC_PERIOD=20s
+
 all: manager
 
 # Run tests
