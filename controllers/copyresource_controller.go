@@ -59,18 +59,16 @@ type Object interface {
 // +kubebuilder:rbac:groups=,resources=configmaps/status,verbs=get;update;patch
 
 func (r *CopyResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	ctx := context.Background()
-	//_ = r.Log.WithValues("copyresource", req.NamespacedName)
-	log := r.Log.WithValues("copyresource", req.NamespacedName)
+	log := r.Log.WithValues("CopyResource", req.NamespacedName)
 
 	copyResource := &resourcebaloisechv1alpha1.CopyResource{}
-	err := r.Get(ctx, req.NamespacedName, copyResource)
+	err := r.Get(context.TODO(), req.NamespacedName, copyResource)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			log.Info("CopyResource not found. Ignoring since object must be deleted.")
 			return ctrl.Result{}, nil
 		}
-		log.Error(err, "Failed to get CopyResource.")
+		log.Error(err, "Failed to get CopyResource.", "namespacedName", req.NamespacedName)
 		return ctrl.Result{}, err
 	}
 
@@ -80,11 +78,14 @@ func (r *CopyResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	}
 
 	sourceResource, _ := StringToStruct(copyResource.Spec.Kind)
-
-	err = r.Client.Get(ctx, namespacedName, sourceResource)
-	if err != nil && !errors.IsNotFound(err) {
-		log.Error(err, "Get Resource error.")
+	err = r.Client.Get(context.TODO(), namespacedName, sourceResource)
+	if err != nil && errors.IsNotFound(err) {
+		log.Info("Source resource not found.", "namespacedName", namespacedName)
 		return ctrl.Result{}, nil
+	}
+	if err != nil {
+		log.Error(err, "Source resource error.", "namespacedName", namespacedName)
+		return ctrl.Result{}, err
 	}
 
 	targetResource, _ := StringToStruct(copyResource.Spec.Kind)
@@ -93,51 +94,53 @@ func (r *CopyResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	targetResource.SetUID("")
 	targetResource.SetNamespace(copyResource.Spec.TargetNamespace)
 	targetResource.SetName(copyResource.Namespace + "-" + copyResource.Name)
-	targetResource.SetOwnerReferences(nil)
-	ownerReference := buildOwnerReferenceToCopyRessource(copyResource)
-	targetResource.SetOwnerReferences([]metav1.OwnerReference{ownerReference})
+	targetResource.SetOwnerReferences([]metav1.OwnerReference{buildOwnerReferenceToCopyResource(copyResource)})
 
-	exists := existsInTargetNamespace(r, targetResource)
+	exists := isObjectExists(r, targetResource)
 
 	if copyResource.Status.ResourceVersion == "" ||
 		sourceResourceVersionHasChanged(copyResource.Spec.Kind, copyResource.Status.ResourceVersion, sourceResource) ||
 		!exists {
 
 		if !exists {
-			err = r.Client.Create(ctx, targetResource)
+			err = r.Client.Create(context.TODO(), targetResource)
 			if err != nil {
-				log.Error(err, "Failed to create "+targetResource.GetName()+" in namesapce "+targetResource.GetNamespace())
+				log.Error(err, "Failed to create resource.", "name", targetResource.GetName(), "namespace ", targetResource.GetNamespace())
 				return ctrl.Result{}, err
 			}
-			log.Info("successfully created " + targetResource.GetName() + " in namesapce " + targetResource.GetNamespace())
+			log.Info("Successfully created.", "name", targetResource.GetName(), "namespace ", targetResource.GetNamespace())
 		} else {
-			err = r.Client.Update(ctx, targetResource)
-			if err == nil {
-				log.Info("successfully update " + targetResource.GetName() + " in namesapce " + targetResource.GetNamespace())
-			} else {
-				log.Error(err, "Failed to update "+targetResource.GetName()+" in namesapce "+targetResource.GetNamespace())
+			err = r.Client.Update(context.TODO(), targetResource)
+			if err != nil {
+				log.Error(err, "Failed to update.", "name", targetResource.GetName(), "namespace ", targetResource.GetNamespace())
 				return ctrl.Result{}, err
 			}
+			log.Info("Successfully update.", "name", targetResource.GetName(), "namespace ", targetResource.GetNamespace())
 		}
 
 		copyResource.Status.ResourceVersion = getResourceVersion(copyResource.Spec.Kind, sourceResource)
-		err := r.Status().Update(ctx, copyResource)
+		err := r.Status().Update(context.TODO(), copyResource)
 		if err != nil {
-			log.Error(err, "Failed to update CopyResource status")
-			return ctrl.Result{}, err
+			log.Error(err, "Failed to update CopyResource status.", "resourceVersion", copyResource.Status.ResourceVersion)
+			return ctrl.Result{}, nil
 		}
 	}
 
 	return ctrl.Result{}, nil
 }
 
-func existsInTargetNamespace(r *CopyResourceReconciler, targetResource Object) bool {
+func (r *CopyResourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&resourcebaloisechv1alpha1.CopyResource{}).
+		Complete(r)
+}
+
+func isObjectExists(r *CopyResourceReconciler, targetResource Object) bool {
 	targetNamespacedName := types.NamespacedName{
 		Namespace: targetResource.GetNamespace(),
 		Name:      targetResource.GetName(),
 	}
-	// use an unstructured type for the search because Get uses a cached reader for structured type and the ressource could not be found.
-	// maybe because we try to read it from a different namespace.
+	// Use an unstructured type to avoid cache reader
 	u := &unstructured.Unstructured{}
 	u.SetGroupVersionKind(schema.GroupVersionKind{
 		Group:   "",
@@ -147,7 +150,7 @@ func existsInTargetNamespace(r *CopyResourceReconciler, targetResource Object) b
 	err := r.Client.Get(context.TODO(), targetNamespacedName, u)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			log.Error(err, "Failed to search for target ressource:", targetNamespacedName)
+			log.Error(err, "Not found.", targetNamespacedName)
 		}
 		return false
 	}
@@ -161,7 +164,7 @@ func StringToStruct(kind string) (Object, error) {
 	case "ConfigMap":
 		return &v1.ConfigMap{}, nil
 	default:
-		return nil, fmt.Errorf("%s is not a known resource name", kind)
+		return nil, fmt.Errorf("%s is not a known resource kind", kind)
 	}
 }
 
@@ -170,39 +173,32 @@ func cloneResource(kind string, source Object, target Object) (Object, error) {
 	case "Secret":
 		sourceSecret := source.(*v1.Secret)
 		copier.Copy(target.(*v1.Secret), sourceSecret)
-		target.SetResourceVersion(sourceSecret.ResourceVersion)
 		return target, nil
 	case "ConfigMap":
 		sourceConfigMap := source.(*v1.ConfigMap)
 		copier.Copy(target.(*v1.ConfigMap), sourceConfigMap)
-		target.SetResourceVersion(sourceConfigMap.ResourceVersion)
 		return target, nil
 	default:
-		return nil, fmt.Errorf("%s is not a known resource name", kind)
+		return nil, fmt.Errorf("%s is not a known resource kind", kind)
 	}
 }
 
-func buildOwnerReferenceToCopyRessource(copyResource *resourcebaloisechv1alpha1.CopyResource) metav1.OwnerReference {
-	ownerReference := metav1.OwnerReference{}
-	ownerReference.APIVersion = copyResource.APIVersion
-	ownerReference.Kind = copyResource.Kind
-	ownerReference.Name = copyResource.GetName()
-	ownerReference.UID = copyResource.GetUID()
-	// If true, this reference points to the managing controller.
-	ownerReference.Controller = refToBoolTrue()
-	// If true, AND if the owner has the "foregroundDeletion" finalizer, then
-	// the owner cannot be deleted from the key-value store until this
-	// reference is removed.
-	// Defaults to false.
-	// To set this field, a user needs "delete" permission of the owner,
-	// otherwise 422 (Unprocessable Entity) will be returned.
-	ownerReference.BlockOwnerDeletion = refToBoolFalse()
-	return ownerReference
+func buildOwnerReferenceToCopyResource(copyResource *resourcebaloisechv1alpha1.CopyResource) metav1.OwnerReference {
+	return metav1.OwnerReference{
+		APIVersion: copyResource.APIVersion,
+		Kind:       copyResource.Kind,
+		Name:       copyResource.GetName(),
+		UID:        copyResource.GetUID(),
+		// If true, this reference points to the managing controller.
+		Controller: BoolPointer(true),
+		// Don't block owner deletion (CopyResource) if this resource still exists
+		BlockOwnerDeletion: BoolPointer(false),
+	}
 }
 
-func sourceResourceVersionHasChanged(kind string, copyRessourceVersion string, source Object) bool {
+func sourceResourceVersionHasChanged(kind string, copyResourceVersion string, source Object) bool {
 	sourceResourceVersion := getResourceVersion(kind, source)
-	return sourceResourceVersion != copyRessourceVersion
+	return sourceResourceVersion != copyResourceVersion
 }
 
 func getResourceVersion(kind string, resource Object) string {
@@ -216,18 +212,6 @@ func getResourceVersion(kind string, resource Object) string {
 	}
 }
 
-func (r *CopyResourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&resourcebaloisechv1alpha1.CopyResource{}).
-		Complete(r)
-}
-
-func refToBoolFalse() *bool {
-	b := false
-	return &b
-}
-
-func refToBoolTrue() *bool {
-	b := true
+func BoolPointer(b bool) *bool {
 	return &b
 }
