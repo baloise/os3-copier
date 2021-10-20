@@ -17,7 +17,7 @@ stringData:
   username: admin
   password: t0p-Secret
 ---
-apiVersion: resource.baloise.ch.baloise.ch/v1alpha1
+apiVersion: resource.baloise.ch/v1alpha1
 kind: CopyResource
 metadata:
   name: copyresource-one
@@ -34,7 +34,7 @@ stringData:
   secret: two
   update: awesome
 ---
-apiVersion: resource.baloise.ch.baloise.ch/v1alpha1
+apiVersion: resource.baloise.ch/v1alpha1
 kind: CopyResource
 metadata:
   name: copyresource-two

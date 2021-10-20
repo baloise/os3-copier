@@ -17,7 +17,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"go.uber.org/zap/zapcore"
 	"os"
+	"strconv"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -53,45 +55,42 @@ func init() {
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
+	var devModeEnabled bool
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.BoolVar(&devModeEnabled, "dev-mode-enabled", false,
+		"Enable dev mode to see DEBUG logs and stack traces. ")
 	flag.Parse()
 
-	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
+	var stacktraceLevel zapcore.LevelEnabler
+	var logLevel zapcore.LevelEnabler
+	if devModeEnabled {
+		stacktraceLevel = zapcore.WarnLevel
+		logLevel = zapcore.DebugLevel
+	} else {
+		stacktraceLevel = zapcore.FatalLevel
+		logLevel = zapcore.InfoLevel
+	}
+	ctrl.SetLogger(zap.New(zap.UseDevMode(true), zap.StacktraceLevel(stacktraceLevel), zap.Level(logLevel)))
 
 	watchNamespace, err := getEnvVar(WatchNamespaceEnvName)
 	if err != nil {
-		setupLog.Error(err, "unable to get WatchNamespace, "+
+		setupLog.Error(err, "Unable to get WatchNamespace, "+
 			"please set environment variable "+WatchNamespaceEnvName)
 		os.Exit(1)
 	}
+	setupLog.Info(WatchNamespaceEnvName + " set, using " + watchNamespace + "as namespace")
 
-	syncPeriodS, err := getEnvVar(SyncPeriodEnvName)
-	if err != nil {
-		setupLog.Error(err, "unable to get SyncPeriod for Reconciler, "+
-			"please set environment variable "+SyncPeriodEnvName)
-		os.Exit(1)
-	}
-
-	syncDuration, err := time.ParseDuration(syncPeriodS)
-	if err != nil {
-		setupLog.Error(err, "error parsing SyncPeriod from "+
-			syncPeriodS+"please fix value for environment variable "+SyncPeriodEnvName+
-			"A duration string is a possibly signed sequence of decimal numbers, each with optional "+
-			"fraction and a unit suffix,such as \"300ms\", \"-1.5h\" or \"2h45m\". Valid time units are "+
-			"\"ns\", \"us\" (or \"µs\"), \"ms\", \"s\", \"m\", \"h\".")
-		os.Exit(1)
-	}
-
+	syncPeriod := getSyncPeriod()
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: metricsAddr,
 		Port:               9443,
 		LeaderElection:     enableLeaderElection,
 		LeaderElectionID:   "3dacd622.baloise.ch",
-		SyncPeriod:         &syncDuration,
+		SyncPeriod:         &syncPeriod,
 		Namespace:          watchNamespace,
 	})
 	if err != nil {
@@ -118,7 +117,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	setupLog.Info("starting manager for os3-copier. watched namespace is: " + watchNamespace)
+	setupLog.Info("starting manager for os3-copier.")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
@@ -133,13 +132,13 @@ func getEnvVar(name string) (string, error) {
 	return ns, nil
 }
 
-func getSyncPeriod() (time.Duration, error) {
-	syncPeriodS, err := getEnvVar(SyncPeriodEnvName)
+func getSyncPeriod() time.Duration {
+	syncPeriodInSeconds, err := getEnvVar(SyncPeriodEnvName)
+	syncPeriodInSecondsInt, err := strconv.ParseInt(syncPeriodInSeconds, 10, 64)
 	if err != nil {
-		setupLog.Error(err, "unable to get SyncPeriod for Reconciler, "+
-			"please set environment variable "+SyncPeriodEnvName)
+		setupLog.Info(SyncPeriodEnvName + " not set, using 300s as default syncPeriod")
+		return time.Duration(300) * time.Second
 	}
-	duration, err := time.ParseDuration(syncPeriodS)
-
-	return duration, nil
+	setupLog.Info(SyncPeriodEnvName + " set, using " + syncPeriodInSeconds + "s as syncPeriod")
+	return time.Duration(syncPeriodInSecondsInt) * time.Second
 }

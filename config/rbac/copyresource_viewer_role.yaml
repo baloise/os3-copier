@@ -5,7 +5,7 @@ metadata:
   name: copyresource-viewer-role
 rules:
 - apiGroups:
-  - resource.baloise.ch.baloise.ch
+  - resource.baloise.ch
   resources:
   - copyresources
   verbs:
@@ -13,7 +13,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - resource.baloise.ch.baloise.ch
+  - resource.baloise.ch
   resources:
   - copyresources/status
   verbs:

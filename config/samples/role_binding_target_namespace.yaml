@@ -1,0 +1,13 @@
+---
+apiVersion: rbac.authorization.os3.io/v1
+kind: RoleBinding
+metadata:
+  name: os3-copier-role-binding
+roleRef:
+  kind: ClusterRole
+  apiGroup: rbac.authorization.os3.io
+  name: os3-copier-manager-role
+subjects:
+  - kind: ServiceAccount
+    name: os3-copier
+    namespace: <namespace-where-the-sa-lives>

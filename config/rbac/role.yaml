@@ -7,7 +7,7 @@ metadata:
   name: os3-manager-manager-role
 rules:
 - resources:
-  - configmap
+  - configmaps
   verbs:
   - create
   - delete
@@ -17,17 +17,17 @@ rules:
   - update
   - watch
 - resources:
-  - configmap/finalizers
+  - configmaps/finalizers
   verbs:
   - update
 - resources:
-  - configmap/status
+  - configmaps/status
   verbs:
   - get
   - patch
   - update
 - resources:
-  - secret
+  - secrets
   verbs:
   - create
   - delete
@@ -37,11 +37,11 @@ rules:
   - update
   - watch
 - resources:
-  - secret/finalizers
+  - secrets/finalizers
   verbs:
   - update
 - resources:
-  - secret/status
+  - secrets/status
   verbs:
   - get
   - patch
