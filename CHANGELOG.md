@@ -1,3 +1,11 @@
+## [1.3.0](https://github.com/baloise/os3-copier/compare/v1.2.3...v1.3.0) (2021-10-20)
+
+
+### Features
+
+* **CHIST-3146:** improve error handling and add dev mode ([916055d](https://github.com/baloise/os3-copier/commit/916055d35d1955f443aa0765887a3e32d3127a21))
+* **CHIST-3146:** review with Michael ([3eb8050](https://github.com/baloise/os3-copier/commit/3eb8050e24671f91cf45e116e9926e45b55944f8))
+
 ### [1.2.3](https://github.com/baloise/os3-copier/compare/v1.2.2...v1.2.3) (2021-10-18)
 
 
