@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"github.com/prometheus/common/log"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -68,8 +67,8 @@ func (r *CopyResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			log.Info("CopyResource not found. Ignoring since object must be deleted.")
 			return ctrl.Result{}, nil
 		}
-		log.Error(err, ". Failed to get CopyResource.", "namespacedName", req.NamespacedName)
-		return ctrl.Result{}, err
+		log.Error(err, "Failed to get CopyResource.", "namespacedName", req.NamespacedName)
+		return ctrl.Result{}, nil
 	}
 
 	namespacedName := types.NamespacedName{
@@ -84,8 +83,8 @@ func (r *CopyResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		return ctrl.Result{}, nil
 	}
 	if err != nil {
-		log.Error(err, ". Source resource error.", "namespacedName", namespacedName)
-		return ctrl.Result{}, err
+		log.Error(err, "Source resource error.", "namespacedName", namespacedName)
+		return ctrl.Result{}, nil
 	}
 
 	targetResource, _ := StringToStruct(copyResource.Spec.Kind)
@@ -96,7 +95,7 @@ func (r *CopyResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	targetResource.SetName(copyResource.Namespace + "-" + copyResource.Name)
 	targetResource.SetOwnerReferences([]metav1.OwnerReference{buildOwnerReferenceToCopyResource(copyResource)})
 
-	exists := isObjectExists(r, targetResource)
+	exists := isObjectExists(r, targetResource, log)
 
 	if copyResource.Status.ResourceVersion == "" ||
 		sourceResourceVersionHasChanged(copyResource.Spec.Kind, copyResource.Status.ResourceVersion, sourceResource) ||
@@ -105,15 +104,15 @@ func (r *CopyResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		if !exists {
 			err = r.Client.Create(context.TODO(), targetResource)
 			if err != nil {
-				log.Error(err, ". Failed to create resource.", "name", targetResource.GetName(), "namespace ", targetResource.GetNamespace())
-				return ctrl.Result{}, err
+				log.Error(err, "Failed to create resource.", "name", targetResource.GetName(), "namespace ", targetResource.GetNamespace())
+				return ctrl.Result{}, nil
 			}
 			log.Info("Successfully created.", "name", targetResource.GetName(), "namespace ", targetResource.GetNamespace())
 		} else {
 			err = r.Client.Update(context.TODO(), targetResource)
 			if err != nil {
-				log.Error(err, ". Failed to update.", "name", targetResource.GetName(), "namespace ", targetResource.GetNamespace())
-				return ctrl.Result{}, err
+				log.Error(err, "Failed to update.", "name", targetResource.GetName(), "namespace ", targetResource.GetNamespace())
+				return ctrl.Result{}, nil
 			}
 			log.Info("Successfully update.", "name", targetResource.GetName(), "namespace ", targetResource.GetNamespace())
 		}
@@ -121,7 +120,7 @@ func (r *CopyResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		copyResource.Status.ResourceVersion = getResourceVersion(copyResource.Spec.Kind, sourceResource)
 		err := r.Status().Update(context.TODO(), copyResource)
 		if err != nil {
-			log.Error(err, ". Failed to update CopyResource status.", "resourceVersion", copyResource.Status.ResourceVersion)
+			log.Error(err, "Failed to update CopyResource status.", "resourceVersion", copyResource.Status.ResourceVersion)
 			return ctrl.Result{}, nil
 		}
 	}
@@ -135,7 +134,7 @@ func (r *CopyResourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func isObjectExists(r *CopyResourceReconciler, targetResource Object) bool {
+func isObjectExists(r *CopyResourceReconciler, targetResource Object, log logr.Logger) bool {
 	targetNamespacedName := types.NamespacedName{
 		Namespace: targetResource.GetNamespace(),
 		Name:      targetResource.GetName(),
@@ -150,7 +149,7 @@ func isObjectExists(r *CopyResourceReconciler, targetResource Object) bool {
 	err := r.Client.Get(context.TODO(), targetNamespacedName, u)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			log.Info("Not found ", targetNamespacedName)
+			log.Info("Not found " + targetNamespacedName.Namespace + "/" + targetNamespacedName.Name)
 		}
 		return false
 	}

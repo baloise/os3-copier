@@ -11,6 +11,15 @@ This new CRD is called `CopyResrouce` and the resulting resource is called targe
 ## Usage
 You can find some usage examples in `config/samples/**`.
 
+### Configuration
+| Name                    | Type    | Default |
+| ------------------------|---------|---------|
+| WATCH_NAMESPACE         | env var | NA      |
+| SYNC_PERIOD             | env var | 300     |
+| metrics-addr            | flag    | :8080   |
+| enable-leader-election  | flag    | false   |
+| dev-mode-enabled        | flag    | false   |
+
 ### Permissions
 You need a service account to operate your operator. This service account needs to have
 access to the target namespace regarding the resource types.  

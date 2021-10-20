@@ -17,6 +17,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"go.uber.org/zap/zapcore"
 	"os"
 	"strconv"
 	"time"
@@ -54,13 +55,25 @@ func init() {
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
+	var devModeEnabled bool
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.BoolVar(&devModeEnabled, "dev-mode-enabled", false,
+		"Enable dev mode to see DEBUG logs and stack traces. ")
 	flag.Parse()
 
-	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
+	var stacktraceLevel zapcore.LevelEnabler
+	var logLevel zapcore.LevelEnabler
+	if devModeEnabled {
+		stacktraceLevel = zapcore.WarnLevel
+		logLevel = zapcore.DebugLevel
+	} else {
+		stacktraceLevel = zapcore.FatalLevel
+		logLevel = zapcore.InfoLevel
+	}
+	ctrl.SetLogger(zap.New(zap.UseDevMode(true), zap.StacktraceLevel(stacktraceLevel), zap.Level(logLevel)))
 
 	watchNamespace, err := getEnvVar(WatchNamespaceEnvName)
 	if err != nil {
@@ -68,6 +81,7 @@ func main() {
 			"please set environment variable "+WatchNamespaceEnvName)
 		os.Exit(1)
 	}
+	setupLog.Info(WatchNamespaceEnvName + " set, using " + watchNamespace + "as namespace")
 
 	syncPeriod := getSyncPeriod()
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
@@ -103,7 +117,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	setupLog.Info("starting manager for os3-copier. watched namespace is: " + watchNamespace)
+	setupLog.Info("starting manager for os3-copier.")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
@@ -125,5 +139,6 @@ func getSyncPeriod() time.Duration {
 		setupLog.Info(SyncPeriodEnvName + " not set, using 300s as default syncPeriod")
 		return time.Duration(300) * time.Second
 	}
+	setupLog.Info(SyncPeriodEnvName + " set, using " + syncPeriodInSeconds + "s as syncPeriod")
 	return time.Duration(syncPeriodInSecondsInt) * time.Second
 }
