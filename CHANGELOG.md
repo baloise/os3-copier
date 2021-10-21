@@ -1,3 +1,14 @@
+## [2.0.0](https://github.com/baloise/os3-copier/compare/v1.3.0...v2.0.0) (2021-10-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* **CHIST-3146:** no
+
+### Features
+
+* **CHIST-3146:** add endpoints for live- and readiness probe ([27c2eb2](https://github.com/baloise/os3-copier/commit/27c2eb2adf81853491e6de540261c3ca1f1f466f))
+
 ## [1.3.0](https://github.com/baloise/os3-copier/compare/v1.2.3...v1.3.0) (2021-10-20)
 
 
