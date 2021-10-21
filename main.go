@@ -54,9 +54,11 @@ func init() {
 
 func main() {
 	var metricsAddr string
+	var healtAddr string
 	var enableLeaderElection bool
 	var devModeEnabled bool
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
+	flag.StringVar(&healtAddr, "probe-addr", ":8081", "The address the health check endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
@@ -85,13 +87,16 @@ func main() {
 
 	syncPeriod := getSyncPeriod()
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:             scheme,
-		MetricsBindAddress: metricsAddr,
-		Port:               9443,
-		LeaderElection:     enableLeaderElection,
-		LeaderElectionID:   "3dacd622.baloise.ch",
-		SyncPeriod:         &syncPeriod,
-		Namespace:          watchNamespace,
+		Scheme:                 scheme,
+		MetricsBindAddress:     metricsAddr,
+		LivenessEndpointName:   "/healthz",
+		ReadinessEndpointName:  "/readyz",
+		HealthProbeBindAddress: healtAddr,
+		Port:                   9443,
+		LeaderElection:         enableLeaderElection,
+		LeaderElectionID:       "3dacd622.baloise.ch",
+		SyncPeriod:             &syncPeriod,
+		Namespace:              watchNamespace,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
