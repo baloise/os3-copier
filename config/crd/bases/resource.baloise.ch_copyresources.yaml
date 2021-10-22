@@ -45,6 +45,9 @@ spec:
             metaName:
               description: The MetaName of the Resource found in metadata.name
               type: string
+            targetName:
+              description: The TargetName the Resource should be named in TargetNamespace
+              type: string
             targetNamespace:
               description: The TargetNamespace the Resource should be copied to
               type: string
