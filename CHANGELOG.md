@@ -1,3 +1,10 @@
+## [2.1.0](https://github.com/baloise/os3-copier/compare/v2.0.0...v2.1.0) (2021-10-25)
+
+
+### Features
+
+* **CHIST-5791:** add targetName feature ([eb6e0eb](https://github.com/baloise/os3-copier/commit/eb6e0ebed171fbdf10a906a827ad9c2eaa78b613))
+
 ## [2.0.0](https://github.com/baloise/os3-copier/compare/v1.3.0...v2.0.0) (2021-10-21)
 
 
