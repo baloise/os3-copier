@@ -37,6 +37,10 @@ type CopyResourceSpec struct {
 	// The TargetNamespace the Resource should be copied to
 	// +kubebuilder:validation:Required
 	TargetNamespace string `json:"targetNamespace"`
+
+	// The TargetName the Resource should be named in TargetNamespace
+	// +kubebuilder:validation:Optional
+	TargetName string `json:"targetName"`
 }
 
 // CopyResourceStatus defines the observed state of CopyResource

@@ -92,7 +92,11 @@ func (r *CopyResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	targetResource.SetResourceVersion("")
 	targetResource.SetUID("")
 	targetResource.SetNamespace(copyResource.Spec.TargetNamespace)
-	targetResource.SetName(copyResource.Namespace + "-" + copyResource.Name)
+	if copyResource.Spec.TargetName != "" {
+		targetResource.SetName(copyResource.Spec.TargetName)
+	} else {
+		targetResource.SetName(copyResource.Namespace + "-" + copyResource.Name)
+	}
 	targetResource.SetOwnerReferences([]metav1.OwnerReference{buildOwnerReferenceToCopyResource(copyResource)})
 
 	exists := isObjectExists(r, targetResource, log)
