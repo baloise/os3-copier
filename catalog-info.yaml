@@ -1,0 +1,11 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: os3-copier
+  title: OS3 Copier
+  description: The OpenShift operator for RHSSO and Kafka to copy secrets to DevOps teams
+spec:
+  type: library
+  lifecycle: production
+  owner: integration-services
+  system: rhsso
